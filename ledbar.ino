@@ -94,12 +94,40 @@ void test_ledbar()
   Serial.println("LED Bar chaser");
   for(int i = 0; i < 8; i++) 
   {
-    clearLEDBar();
     setLEDBarInt(1<<i);
     delay(250);
   }
 }
-  
+int curbarPixel = 0;
+unsigned long ledbarDelay = 200;
+unsigned long lastbarTime;
+
+void init_ledbar_chase(unsigned long bardelay) {
+  lastbarTime = millis();
+  curbarPixel = 0;
+  ledbarDelay = bardelay;
+  setLEDBarInt(1<<curbarPixel);
+}
+ 
+ 
+void update_ledbar_chase() {
+  /*
+    IF it difference between (the last millis() it updated), and (current millis())
+    is greater than ledbarDelay, then update to the next led, and set lastbarTime 
+    to current millis()
+  */
+  if((millis()-lastbarTime)>ledbarDelay)
+  {
+    curbarPixel += 1;
+    if(curbarPixel >= 8)
+    {
+      curbarPixel = 0;
+    }
+    setLEDBarInt(1<<curbarPixel);
+    lastbarTime = millis();
+  }
+} 
+
   /*
   // count from 0 to 255 and display the number 
   // on the LEDs

@@ -1,6 +1,12 @@
 #include <Adafruit_NeoPixel.h>
 
+int rgbState = 0;
+#define RGB_STATE_IDLE = 1;
 
+int pixels[4][3] = {{0,0,0},{0,0,0},{0,0,0},{0,0,0}};
+int count = 0;
+int curPixelVal = 1;
+int curColor = 2;
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -9,7 +15,7 @@
 //   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, RGB_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, RGB_PIN, NEO_GRB + NEO_KHZ800);
 
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
 // pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
@@ -18,7 +24,9 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, RGB_PIN, NEO_GRB + NEO_KHZ800);
 
 void setup_RGB() {
   strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
+  
+  colorWipe(strip.Color(0, 0, 0), 4);
+  strip.show();
 }
 /*
 void loop() {
@@ -43,6 +51,33 @@ void colorWipe(uint32_t c, uint8_t wait) {
       strip.show();
       delay(wait);
   }
+}
+
+void clearRGBStrip()
+{
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+      strip.setPixelColor(i, strip.Color(0,0,0));
+      strip.show();
+  }
+}
+
+void setRGBStripColor(int red, int green, int blue)
+{
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+      strip.setPixelColor(i, strip.Color(red,green,blue));
+      strip.show();
+  }
+}
+
+void setRGBPixelColor(int red, int green, int blue, int pixel)
+{
+  strip.setPixelColor(pixel, strip.Color(red,green,blue));
+  strip.show();
+}
+
+void setRGBPixelQueue(int red, int green, int blue, int pixel)
+{
+  strip.setPixelColor(pixel, strip.Color(red,green,blue));
 }
 
 void rainbow(uint8_t wait) {
@@ -120,9 +155,120 @@ uint32_t Wheel(byte WheelPos) {
   }
 }
 
+void setRGBStripColor(int col, int colval)
+{
+  if(col == 0)
+  {
+    colorWipe(strip.Color(colval, 0, 0), 4);
+  }
+  else if(col == 1)
+  {
+    colorWipe(strip.Color(0, colval, 0), 4);
+  }
+  else
+  {
+    colorWipe(strip.Color(0, 0, colval), 4);
+  }
+  
+  strip.show();
+}
+
 void test_rgb() {
   Serial.println("RGB rainbow pattern");
   delay(500);
   rainbow(20);
   colorWipe(strip.Color(0, 0, 0), 50);
 }
+
+unsigned long rgbDelay = 50;
+unsigned long lastRGBTime;
+int rgbIncrement = 1;
+int maxRGBVal = 255;
+
+void init_rgb_fade(int col, int rgbincrement, int maxrgbval, unsigned long rgbdelay) 
+{
+  lastRGBTime = millis();
+  rgbDelay = rgbdelay;
+  rgbIncrement = rgbincrement;
+  curPixelVal = 0;
+  curColor = col;
+  maxRGBVal = maxrgbval;
+}
+
+void update_rgb_fade()
+{
+  /*
+    IF it difference between (the last millis() it updated), and (current millis())
+    is greater than ledbarDelay, then increment curPixelVal, and set lastRGBTime 
+    to current millis()
+  */
+  if((millis()-lastRGBTime)>rgbDelay)
+  {
+    if(curPixelVal >= maxRGBVal)
+    {
+      curPixelVal = 0;
+    }
+    for(int i = 0; i < NUM_LEDS; i ++)
+    {
+      pixels[i][curColor] = curPixelVal;
+    }
+    //clearRGBStrip();
+    setRGBStripColor(curColor,curPixelVal);
+    curPixelVal += rgbIncrement;
+    lastRGBTime = millis();
+  }
+}
+
+void init_rgb_flash(int col, int maxrgbval, unsigned long rgbdelay)
+{
+  lastRGBTime = millis();
+  rgbDelay = rgbdelay;
+  curPixelVal = 0;
+  curColor = col;
+  maxRGBVal = maxrgbval;
+}
+
+void update_rgb_flash()
+{
+  if((millis()-lastRGBTime)>rgbDelay)
+  {
+    if(curPixelVal == 0)
+    {
+      curPixelVal = maxRGBVal;
+    }
+    else
+    {
+      curPixelVal = 0;
+    }
+    setRGBStripColor(curColor, curPixelVal);
+    lastRGBTime = millis();
+  }
+}
+
+/*
+void update_rgb_idle()
+{
+  int prevPixel = curPixelVal;
+  clearRGBStrip();
+  strip.setPixelColor(curPixelVal, strip.Color(pixels[curPixelVal][0],pixels[curPixelVal][1],pixels[curPixelVal][2]));
+  strip.show();
+  
+  Serial.print("Pixel: ");
+  Serial.print((int)curPixelVal);
+  Serial.print(" Color: ");
+  Serial.print((int)curColor);
+  Serial.print(" Value: ");
+  Serial.println((int)pixels[curPixelVal][curColor]);
+  if(pixels[curPixelVal][curColor] >= 255)
+  {
+    pixels[curPixelVal][curColor] = 0;
+    while(prevPixel == curPixelVal) {
+       curPixelVal =  (int) random(0, 3);
+    }
+    //clearRGBStrip();
+  }
+  else
+  {
+    pixels[curPixelVal][curColor] += 5;
+  }
+}*/

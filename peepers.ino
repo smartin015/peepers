@@ -3,6 +3,7 @@
 #define SPEAKER_PIN 3
 #define RGB_PIN 9
 #define LASER_PIN 2
+#define NUM_LEDS 4
 
 #define RF_ADDRESS "serv1"
 
@@ -19,12 +20,15 @@ void setup() {
   setup_CAPSENSE(3000);
   setup_LEDBAR(4, 6, 5, A6, A7);
   //playQuack();
-  tests();
+  //tests();
+  init_uber_state_agitated();
 }
 
 void loop() {
-  //rf_check_for_cmd();
-  
+  //update_rgb_idle();
+  //delay(50);
+  //test_ledbar();
+  update_uber_state_agitated();
 }
 
 void tests() {
