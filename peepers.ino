@@ -1,65 +1,65 @@
+#include <Adafruit_NeoPixel.h>
+#include <CapacitiveSensor.h>
+#include <stdint.h>
+#include <SPI.h>
+#include <Mirf.h>
+#include <nRF24L01.h>
+#include <MirfHardwareSpiDriver.h>
+    
+#include "sounddata.h"
 #include "commands.h"
 
-#define SPEAKER_PIN 3
-#define RGB_PIN 9
-#define LASER_PIN 2
+//rgb strip number and pin
 #define NUM_LEDS 4
+#define RGB_PIN 9
 
+//LED Bar pins
+#define LATCH_PIN 4
+#define CLOCK_PIN 6
+#define DATA_PIN 5
+
+//speaker pin
+#define SPEAKER_PIN 3
+
+//laser pin
+#define LASER_PIN 2
+
+#define SERVO_PIN 10
+
+//rf address
 #define RF_ADDRESS "serv1"
 
-String temp;
+//quack sample rate
+#define SAMPLE_RATE 8000
 
-void setup() {
-  Serial.begin(9600);
 
-  setup_RF(RF_ADDRESS);
-  setup_QUACK(SPEAKER_PIN);
-  setup_RGB();
-  setup_LASER(LASER_PIN);
-  setup_SERVO(10);
-  setup_CAPSENSE(3000);
-  setup_LEDBAR(4, 6, 5, A6, A7);
-  //playQuack();
-  //tests();
-  init_uber_state_agitated();
-}
+#define DEBUG
 
-void loop() {
-  //update_rgb_idle();
-  //delay(50);
-  //test_ledbar();
-  update_uber_state_agitated();
-}
+#ifdef DEBUG
+  #define DEBUG_PRINT(x)  Serial.println(x)
+#else
+  #define DEBUG_PRINT(x)
+#endif
 
-void tests() {
-  test_laser();
-  delay(500);
-  test_quack();
-  delay(500);
-  test_rgb();
-  delay(500);
-  test_servo();
-  delay(500);
-  test_ledbar();
-  delay(500);
-  test_capsense();
-  delay(500);
-  Serial.println("Tests completed");
-}
+#define RGB_STRIP
 
- /*
-  setServoPosition(140, 10);
-  playQuack();
-  delay(1000);
-  setServoPosition(0, 10);
-  playQuack();
-  delay(1000);
-  
-  
-  //capsense checking:
-  temp = checkCapSense();
-  for(int i = 0; i < 5; i ++)
-  {
-    Serial.print(temp.charAt(i));
-  }
-  */
+
+typedef enum State{  // <-- the us of typedef is optional
+  STATE_IDLE,
+  STATE_AGITATED,
+  STATE_EXCITED,
+  STATE_SLEEPY,
+  STATE_PATROL
+};
+
+State curState = STATE_IDLE;
+
+typedef enum RGBColor{
+  RGB_RED,
+  RGB_GREEN,
+  RGB_BLUE
+};
+
+
+unsigned long uberStateStart;
+#define AGITATED_TIME 10000

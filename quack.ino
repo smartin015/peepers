@@ -1,60 +1,32 @@
-#include <stdint.h>
-#include <avr/interrupt.h>
-#include <avr/io.h>
-#include <avr/pgmspace.h>
-
-#define SAMPLE_RATE 8000
-
-#include "sounddata.h"
-
-int speakerPin; 
-volatile uint16_t sample;
-byte lastSample;
-
-void setup_QUACK(int pin) {
-  speakerPin = pin;
-  pinMode(speakerPin, OUTPUT);
-}
-
-void stopPlayback()
+class QuackControl
 {
-    // Disable playback per-sample interrupt.
-    TIMSK1 &= ~_BV(OCIE1A);
-
-    // Disable the per-sample timer completely.
-    TCCR1B &= ~_BV(CS10);
-
-    // Disable the PWM timer.
-    TCCR2B &= ~_BV(CS10);
-
-    digitalWrite(speakerPin, LOW);
-}
-
-// This is called at 8000 Hz to load the next sample.
-ISR(TIMER1_COMPA_vect) {
-    if (sample >= sounddata_length) {
-        if (sample == sounddata_length + lastSample) {
-            stopPlayback();
-        }
-        else {
-            if(speakerPin==11){
-                // Ramp down to zero to reduce the click at the end of playback.
-                OCR2A = sounddata_length + lastSample - sample;
-            } else {
-                OCR2B = sounddata_length + lastSample - sample;                
-            }
-        }
+  public:
+    
+    int speakerPin; 
+    volatile uint16_t sample;
+    byte lastSample;
+    
+    QuackControl()
+    {
+      speakerPin = SPEAKER_PIN;
+      pinMode(speakerPin, OUTPUT);
     }
-    else {
-        if(speakerPin==11){
-            OCR2A = pgm_read_byte(&sounddata_data[sample]);
-        } else {
-            OCR2B = pgm_read_byte(&sounddata_data[sample]);            
-        }
+    
+    
+    void stopPlayback()
+    {
+        // Disable playback per-sample interrupt.
+        TIMSK1 &= ~_BV(OCIE1A);
+    
+        // Disable the per-sample timer completely.
+        TCCR1B &= ~_BV(CS10);
+    
+        // Disable the PWM timer.
+        TCCR2B &= ~_BV(CS10);
+    
+        digitalWrite(speakerPin, LOW);
     }
 
-    ++sample;
-}
 
 void playQuack()
 {
@@ -126,3 +98,30 @@ void test_quack() {
   delay(500);
   playQuack();
 }
+    
+    void init_quack_idle()
+    {
+      
+    }
+    
+    void update_quack_idle()
+    {
+      
+    }
+    
+    void init_quack_on_delay(unsigned long quackdelay)
+    {
+      quackDelay = quackdelay;
+      lastQuackTime = millis();
+    }
+    unsigned long lastQuackTime;
+    unsigned long quackDelay;
+    void update_quack_on_delay()
+    {
+      if((millis()-lastQuackTime)>quackDelay)
+      {
+        playQuack();
+        lastQuackTime = millis();
+      } 
+    }
+};
